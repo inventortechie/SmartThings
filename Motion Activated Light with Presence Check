@@ -31,8 +31,11 @@ preferences {
     section("Turn off when there's been no movement for") {
         input "minutes", "number", required: true, title: "Minutes?"
     }
-    section("Turn on this light") {
+    section("Turn on this light 1") {
         input "theswitch", "capability.switch", required: true
+    }
+    section("Turn on this light 2") {
+        input "theswitch2", "capability.switch", required: true
     }
 }
 
@@ -53,6 +56,7 @@ def initialize() {
 def motionDetectedHandler(evt) {
     log.debug "motionDetectedHandler called: $evt"
     theswitch.on()
+    theswitch2.on()
 }
 
 def motionStoppedHandler(evt) {
@@ -75,6 +79,7 @@ def checkMotion() {
         if (elapsed >= threshold) {
             log.debug "Motion has stayed inactive long enough since last check ($elapsed ms):  turning switch off"
             theswitch.off()
+            theswitch2.off()
         } else {
             log.debug "Motion has not stayed inactive long enough since last check ($elapsed ms):  doing nothing"
         }
