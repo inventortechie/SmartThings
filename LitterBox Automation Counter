@@ -29,10 +29,16 @@ preferences {
         input "themotion", "capability.motionSensor", required: true, title: "Where?"
     }
     section("Counter limit to trigger light:") {
-        input "countlimit", "number", required: true, title: "Quantity?"
+        input "counterlimit", "number", required: true, title: "Trigger quantity before executing?"
     }
 	section("Turn on this light") {
-        input "theswitch", "capability.switch", required: true
+        input "thelight", "capability.switch", required: true
+    }
+	section("Turn to this color") {
+        input "thecolor", "enum", title: "Color", required: true, options: ["Red","Green","Blue","Yellow"]
+    }
+	section("Use this reset button") {
+        input "thereset", "capability.button", required: true
     }
 }
 
@@ -48,10 +54,35 @@ def updated() {
 }
 
 def initialize() {
+	state.motionCounter = 0
+    
     subscribe(themotion, "motion.active", motionDetectedHandler)
+    subscribe(thereset, "button", buttonResetHandler)
+}
+
+def incrementCounter() {
+    state.motionCounter = state.motionCounter + 1
+    log.debug "motion has been detected on $state.motionCounter times"
+}
+
+def resetCounter() {
+	state.motionCounter = 0
+    log.debug "Counter is reset, and is now $state.motionCounter"
 }
 
 def motionDetectedHandler(evt) {
     log.debug "motionDetectedHandler called: $evt"
-    theswitch.on()
+    incrementCounter()
+    log.debug "Incrementing counter + 1"
+    if (state.motionCounter >= counterlimit){
+		log.debug "Motion count is at $state.motionCounter and limit of $counterlimit has been met"
+        thelight.on()
+	} else {
+    	log.debug "Motion count is at $motionCounter and limit of $counterlimit has not been met yet"
+    }
+}
+
+def buttonResetHandler(evt) {
+    log.debug "buttonResetHandler called: $evt"
+    resetCounter()
 }
