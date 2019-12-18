@@ -17,7 +17,7 @@ definition(
     name: "LitterBox Usage Count",
     namespace: "InventorTechie",
     author: "Kyle Newton",
-    description: "Counts usage of a litterbox, with a designated SmartThings Motion Detector, which counts to X times. Once the limit is met, the Philips Hue Bulb will change to red indicating it is time to scoop.",
+    description: "Counts usage of a litterbox with a designated motion detector. After X times is met, a compatible color changing LED updates to one of 4 colors indicating it is time to scoop.",
     category: "Pets",
     iconUrl: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience.png",
     iconX2Url: "https://s3.amazonaws.com/smartapp-icons/Convenience/Cat-Convenience@2x.png",
@@ -31,15 +31,17 @@ preferences {
     section("Counter limit to trigger light:") {
         input "counterlimit", "number", required: true, title: "Trigger quantity before executing?"
     }
-	section("Turn on this light") {
-        input "thelight", "capability.switch", required: true
-    }
-	section("Turn to this color") {
-        input "thecolor", "enum", title: "Color", required: true, options: ["Red","Green","Blue","Yellow"]
-    }
+	section("Choose hue lights you wish to control?") {
+        input "hues", "capability.colorControl", title: "Which Color Changing Bulbs?", multiple:true, required: true
+     	input "brightnessLevel", "number", title: "Brightness Level (1-100)?", required: true, defaultvalue: 100 //Select brightness
+	}
+   	section("Turn to this color") {
+        input "chosencolor", "enum", title: "Color", required: true, options: ["Red":"Red","Green":"Green","Blue":"Blue","Yellow":"Yellow"]
+    }   
 	section("Use this reset button") {
         input "thereset", "capability.button", required: true
-    }
+    }  
+    
 }
 
 def installed() {
@@ -62,12 +64,13 @@ def initialize() {
 
 def incrementCounter() {
     state.motionCounter = state.motionCounter + 1
-    log.debug "Motion has been detected on $state.motionCounter times"
+    log.debug "Motion has been detected $state.motionCounter times"
 }
 
 def resetCounter() {
 	state.motionCounter = 0
     log.debug "Counter is reset, and is now back to $state.motionCounter"
+    hues*.setLevel(0)
 }
 
 def motionDetectedHandler(evt) {
@@ -75,14 +78,62 @@ def motionDetectedHandler(evt) {
     incrementCounter()
     log.debug "Incrementing counter + 1"
     if (state.motionCounter >= counterlimit){
-		log.debug "Motion count is $state.motionCounter and count limit of $counterlimit has been met"
-        thelight.on()
+		log.debug "Motion count has been met"
+        setHueColor(chosencolor)
 	} else {
-    	log.debug "Motion count is $motionCounter and count limit of $counterlimit has not been met yet"
-    }
+    	log.debug "Motion count has not been met yet, doing nothing"
+	}
+
 }
 
 def buttonResetHandler(evt) {
     log.debug "buttonResetHandler called: $evt"
     resetCounter()
+}
+
+def setHueColor(color) { 
+		log.debug "setHueColor was called and color received is $color"
+	//Initialize the hue and saturation
+		def hueColor = null
+		def saturation = null
+
+	//Use the user specified brightness level. If they exceeded the min or max values, overwrite the brightness with the actual min/max
+		if (brightnessLevel<1) {
+			brightnessLevel=1
+	}
+    else if (brightnessLevel>100) {
+		brightnessLevel=100
+	}    
+            
+        switch(color) {
+            case "Red" : //Red
+                hueColor = 1
+                saturation = 100
+                log.debug "This is Red"
+                break;
+            case "Green" : //Green
+                hueColor = 33
+                saturation = 100
+                log.debug "This is Green"
+                break;
+            case "Blue" : //Blue
+                hueColor = 70
+                saturation = 100
+                log.debug "This is Blue"
+                break;
+            case "Yellow" : //Yellow
+                hueColor = 16
+                saturation = 100 
+                log.debug "This is Yellow"                
+                break;
+    	}
+        //Change the color of the light
+	
+    	//def newValue = [switch: "on", hue: hueColor, saturation: saturation, level: brightnessLevel]  
+        //hues*.setColor(newValue) // old way isn't working? 
+        hues*.setLevel(brightnessLevel)
+        hues*.setSaturation(saturation)
+		hues*.setHue(hueColor)
+        log.debug "$newValue"
+
 }
